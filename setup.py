@@ -2,7 +2,8 @@ import os
 import sys
 import glob
 
-from distutils.core import setup, Extension
+#from distutils.core import setup, Extension
+from setuptools import setup, find_packages, Extension, Feature
 
 
 COVERAGE_TEST=bool(os.getenv('COVERAGE_TEST', ''))
@@ -20,11 +21,6 @@ if COVERAGE_TEST:
         extra_link_args=["--cover"],
     ) )
 
-                #libraries=[],
-                #include_dirs=[],
-                #depends=(glob.glob('ziutek/*.c') + ['setup.py']),
-
-
 extensions = [Extension('ziutek._qlist',
                 sources=['ziutek/qlist_p.c', 'ziutek/qlist.c'],
                 define_macros=dict(RELEASE=1,).items(),
@@ -38,14 +34,16 @@ setup(name='ziutek',
     license='BSD License',
     author='Marek Majkowski',
     url = 'http://code.google.com/p/ziutek',
-    packages=['ziutek'],
+    packages=find_packages('.'),
     ext_modules=extensions,
     platforms='Linux',
+    test_suite="ziutek.tests.all_tests_suite",
     classifiers=[
         'Intended Audience :: Developers',
         'Programming Language :: Python',
         'Programming Language :: C',
         'Operating System :: POSIX',
         'License :: OSI Approved :: BSD License',
-        ]
+        ],
+    package_data = {'': ['plugin_qlist.c', 'qlist.c']},
     )

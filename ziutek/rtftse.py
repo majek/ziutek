@@ -1,6 +1,7 @@
 '''
->>> srv = BackendServers(os.getenv('BACKEND_SERVER'), 'fs', 1)
->>> idx = Indexer(srv.mc, flush_delay=0.5, max_tuples=16, namespace='test1')
+>>> from .smalltable_extra import QListClient
+>>> mc = QListClient("127.0.0.1:11211")
+>>> idx = Indexer(mc, flush_delay=0.5, max_tuples=16, namespace='test1')
 >>> idx.put(1, "ala ma kota".split())
 3
 >>> idx.flush()
@@ -16,7 +17,7 @@
 3
 >>> idx.flush()
 (1, 3)
->>> srch = Searcher(srv.mc, namespace='test1')
+>>> srch = Searcher(mc, namespace='test1')
 >>> srch.materialized_query(["ala"])
 (4, [1L, 2L, 3L, 4L])
 >>> srch.materialized_query(["ala"], reverse=True)
@@ -44,13 +45,13 @@
 
 >>> srch.materialized_query(["non-exisitng-word"])
 (0, [])
->>> srv.close()
+>>> mc.close()
 
 Deletion.
 
->>> srv = BackendServers(os.getenv('BACKEND_SERVER'), 'fs', 1)
->>> idx = Indexer(srv.mc, flush_delay=55.5, max_tuples=16, namespace='test2')
->>> srch = Searcher(srv.mc, namespace='test2')
+>>> mc = QListClient("127.0.0.1:11211")
+>>> idx = Indexer(mc, flush_delay=55.5, max_tuples=16, namespace='test2')
+>>> srch = Searcher(mc, namespace='test2')
 >>> idx.put(1, "ala ma kota".split())
 3
 >>> idx.delete(1, "ala ma kota".split())
@@ -60,13 +61,13 @@ Deletion.
 >>> srch.materialized_query(["ala"])
 (0, [])
 >>> idx.close()
->>> srv.close()
+>>> mc.close()
 
 Many chunks.
 
->>> srv = BackendServers(os.getenv('BACKEND_SERVER'), 'fs', 1)
->>> idx = Indexer(srv.mc, flush_delay=555, block_size=2, max_tuples=32, namespace='test3')
->>> srch = Searcher(srv.mc, namespace='test3', block_size=2)
+>>> mc = QListClient("127.0.0.1:11211")
+>>> idx = Indexer(mc, flush_delay=555, block_size=2, max_tuples=32, namespace='test3')
+>>> srch = Searcher(mc, namespace='test3', block_size=2)
 >>> idx.put(1, "ala ma kota".split())
 3
 >>> idx.put(2, "ala ma kota w".split())
@@ -93,21 +94,10 @@ Limit results.
 (3, [1L])
 
 >>> idx.close()
->>> srv.close()
-
+>>> mc.close()
 
 '''
 from __future__ import with_statement # 2.5 only
-
-'''
->>> idx.put(1, "ala ma kota".split())
-3
->>> idx.flush()
-(1, 3)
->>> srch.materialized_query(["ala"])
-(1, [1L])
-
-'''
 
 import collections
 import array

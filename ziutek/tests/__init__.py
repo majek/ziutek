@@ -1,52 +1,56 @@
-import unittest
 import doctest
+import glob
+import os
+import unittest
 
+DOCTEST_BLACKLIST=[
+]
 
-class OptionalExtensionTestSuite(unittest.TestSuite):
-    def run(self, result):
-        import simplejson
-        run = unittest.TestSuite.run
-        run(self, result)
-        simplejson._toggle_speedups(False)
-        run(self, result)
-        simplejson._toggle_speedups(True)
-        return result
+def my_import(modulename):
+    mod = __import__(modulename)
+    components = modulename.split('.')
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+    return mod
+
+def mass_import(list_of_modulenames):
+    return [my_import(modulename) for modulename in list_of_modulenames]
+
+def list_files(directory, file_mask):
+    cwd = os.getcwd()
+    os.chdir(directory)
+    files = [os.path.split(f)[1].rpartition('.')[0] \
+                                                for f in glob.glob(file_mask)]
+    os.chdir(cwd)
+    return files
+
+def get_module_names(prefix_module_name, directory, file_mask, skip_modules):
+    module_names = list_files(directory, file_mask)
+    if prefix_module_name and prefix_module_name != "-":
+        module_names = [prefix_module_name + "." + mn for mn in module_names]
+    module_names = filter(lambda mn: max([not mn.startswith(smn) for smn in skip_modules]) if skip_modules else True, module_names)
+    return sorted(module_names)
 
 
 def additional_tests(suite=None):
-    import simplejson
-    import simplejson.encoder
-    import simplejson.decoder
     if suite is None:
         suite = unittest.TestSuite()
-    for mod in (simplejson, simplejson.encoder, simplejson.decoder):
+
+    modules = mass_import(
+        get_module_names('ziutek', 'ziutek', '*.py', DOCTEST_BLACKLIST)
+    )
+    for mod in modules:
         suite.addTest(doctest.DocTestSuite(mod))
     suite.addTest(doctest.DocFileSuite('../../index.rst'))
     return suite
 
 
 def all_tests_suite():
-    suite = unittest.TestLoader().loadTestsFromNames([
-        'simplejson.tests.test_check_circular',
-        'simplejson.tests.test_decode',
-        'simplejson.tests.test_default',
-        'simplejson.tests.test_dump',
-        'simplejson.tests.test_encode_basestring_ascii',
-        'simplejson.tests.test_encode_for_html',
-        'simplejson.tests.test_fail',
-        'simplejson.tests.test_float',
-        'simplejson.tests.test_indent',
-        'simplejson.tests.test_pass1',
-        'simplejson.tests.test_pass2',
-        'simplejson.tests.test_pass3',
-        'simplejson.tests.test_recursion',
-        'simplejson.tests.test_scanstring',
-        'simplejson.tests.test_separators',
-        'simplejson.tests.test_speedups',
-        'simplejson.tests.test_unicode',
-    ])
+    suite = unittest.TestLoader().loadTestsFromNames(
+        get_module_names('ziutek.tests', 'ziutek/tests', 'test_*.py', [])
+    )
     suite = additional_tests(suite)
-    return OptionalExtensionTestSuite([suite])
+    return unittest.TestSuite([suite])
 
 
 def main():

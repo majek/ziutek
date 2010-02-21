@@ -2,7 +2,7 @@
 Included both from backdend and python. Beware on dependencies.
 */
 #include <stdlib.h>
-#include <event.h>
+#include <stdint.h>
 
 #ifndef likely
 #define likely(x)	__builtin_expect(!!(x), 1)
@@ -19,7 +19,7 @@ Included both from backdend and python. Beware on dependencies.
 #define QLIST_MAGIC 0xDEADBEEFDEADBAAFLL
 
 
-static inline int qlist_put_delta(u_int8_t *buf, u_int64_t delta) {
+static inline int qlist_put_delta(uint8_t *buf, uint64_t delta) {
 	if(likely(delta < (1<<7))) {
 		buf[0] = (1<<7) | delta;
 		return(1);
@@ -46,7 +46,7 @@ static inline int qlist_put_delta(u_int8_t *buf, u_int64_t delta) {
 	return(9);
 }
 
-static inline int qlist_put_stop(u_int8_t *buf) {
+static inline int qlist_put_stop(uint8_t *buf) {
 	buf[0] = 0;
 	return(1);
 }
@@ -55,23 +55,23 @@ static inline int qlist_put_stop(u_int8_t *buf) {
 	-1: qbuf_sz too small
 	-2: not sorted
 */
-int qlist_pack(u_int8_t *qbuf_start, int qbuf_sz, u_int64_t *items_start, int items_sz) {
+int qlist_pack(uint8_t *qbuf_start, int qbuf_sz, uint64_t *items_start, int items_sz) {
 	/* We might have 9 bytes overcommit, assume the bufffer is smaller. */
 	qbuf_sz -= 9;
 	if(qbuf_sz < 0)
 		return(-1);
 
-	u_int8_t *qbuf = qbuf_start;
-	u_int8_t *qbuf_end = qbuf + qbuf_sz;
-	u_int64_t *items = items_start;
-	u_int64_t *items_end = items + items_sz;
+	uint8_t *qbuf = qbuf_start;
+	uint8_t *qbuf_end = qbuf + qbuf_sz;
+	uint64_t *items = items_start;
+	uint64_t *items_end = items + items_sz;
 
 	qbuf += qlist_put_delta(qbuf, QLIST_MAGIC);
 	if(unlikely(qbuf >= qbuf_end))
 		return(-1);
 
-	u_int64_t last_item = 0;
-	u_int64_t delta;
+	uint64_t last_item = 0;
+	uint64_t delta;
 	while(items < items_end) {
 		if(unlikely(*items < last_item)) /* unsorted? */
 			return(-2);
@@ -89,10 +89,10 @@ int qlist_pack(u_int8_t *qbuf_start, int qbuf_sz, u_int64_t *items_start, int it
 	return(qbuf - qbuf_start);
 }
 
-static inline int qlist_get_delta(u_int8_t **qbuf, u_int64_t *delta_ptr) {
-	u_int8_t *buf = *qbuf;
+static inline int qlist_get_delta(uint8_t **qbuf, uint64_t *delta_ptr) {
+	uint8_t *buf = *qbuf;
 	
-	u_int64_t delta;
+	uint64_t delta;
 	if(likely(buf[0] & (1<<7))) {
 		delta = (buf[0] & ~(1<<7)) << 0;
 		*delta_ptr = delta;
@@ -113,14 +113,14 @@ static inline int qlist_get_delta(u_int8_t **qbuf, u_int64_t *delta_ptr) {
 		return(0);
 	}else if(buf[0] & (1<<4)) {
 		// ignore buf[0]
-		delta  = ((u_int64_t)buf[1] << 56);
-		delta |= ((u_int64_t)buf[2] << 48);
-		delta |= ((u_int64_t)buf[3] << 40);
-		delta |= ((u_int64_t)buf[4] << 32);
-		delta |= ((u_int64_t)buf[5] << 24);
-		delta |= ((u_int64_t)buf[6] << 16);
-		delta |= ((u_int64_t)buf[7] << 8);
-		delta |= ((u_int64_t)buf[8] << 0);
+		delta  = ((uint64_t)buf[1] << 56);
+		delta |= ((uint64_t)buf[2] << 48);
+		delta |= ((uint64_t)buf[3] << 40);
+		delta |= ((uint64_t)buf[4] << 32);
+		delta |= ((uint64_t)buf[5] << 24);
+		delta |= ((uint64_t)buf[6] << 16);
+		delta |= ((uint64_t)buf[7] << 8);
+		delta |= ((uint64_t)buf[8] << 0);
 		*delta_ptr = delta;
 		*qbuf += 9;
 		return(0);
@@ -131,8 +131,8 @@ static inline int qlist_get_delta(u_int8_t **qbuf, u_int64_t *delta_ptr) {
 }
 
 /*
-static inline int qlist_get_item(u_int8_t **qbuf, u_int64_t *last_item_ptr) {
-	u_int64_t delta = 0;
+static inline int qlist_get_item(uint8_t **qbuf, uint64_t *last_item_ptr) {
+	uint64_t delta = 0;
 	int d = qlist_get_delta(qbuf, &delta);
 	*last_item_ptr += delta;
 	return(d);
@@ -140,7 +140,7 @@ static inline int qlist_get_item(u_int8_t **qbuf, u_int64_t *last_item_ptr) {
 */
 #define qlist_get_item(qbuf, last_item_ptr)		\
 	({						\
-		u_int64_t delta = 0;			\
+		uint64_t delta = 0;			\
 		int d = qlist_get_delta(qbuf, &delta);	\
 		*last_item_ptr += delta;		\
 		(d);					\
@@ -150,15 +150,15 @@ static inline int qlist_get_item(u_int8_t **qbuf, u_int64_t *last_item_ptr) {
 	-1: items_sz too small
 	-2: bad magic
 */
-int qlist_unpack(u_int64_t *items_start, int items_sz,  u_int8_t *qbuf) {
-	u_int64_t magic = 0;
+int qlist_unpack(uint64_t *items_start, int items_sz,  uint8_t *qbuf) {
+	uint64_t magic = 0;
 	qlist_get_delta(&qbuf, &magic);
 	if(magic != QLIST_MAGIC)
 		return(-2);
 	
-	u_int64_t last_item = 0;
-	u_int64_t *items = items_start;
-	u_int64_t *items_end = items + items_sz;
+	uint64_t last_item = 0;
+	uint64_t *items = items_start;
+	uint64_t *items_end = items + items_sz;
 	while( 1 ) {
 		if(unlikely(items >= items_end))
 			return(-1);
@@ -171,15 +171,15 @@ int qlist_unpack(u_int64_t *items_start, int items_sz,  u_int8_t *qbuf) {
 }
 
 /*
-static inline int qlist_put_item(u_int8_t *qbuf, u_int64_t *last_item, u_int64_t item) {
-	u_int64_t delta = item - *last_item;
+static inline int qlist_put_item(uint8_t *qbuf, uint64_t *last_item, uint64_t item) {
+	uint64_t delta = item - *last_item;
 	*last_item = item;
 	return(qlist_put_delta(qbuf, delta));
 }
 */
 #define qlist_put_item(qbuf, last_item, item) 		\
 	({						\
-		u_int64_t delta = item - *last_item;	\
+		uint64_t delta = item - *last_item;	\
 		*last_item = item;			\
 		(qlist_put_delta(qbuf, delta));		\
 	})
@@ -190,9 +190,9 @@ static inline int qlist_put_item(u_int8_t *qbuf, u_int64_t *last_item, u_int64_t
 	if(qpc_sz < 0)					\
 		return(-1);				\
 							\
-	u_int8_t *qpc = qpc_start;			\
-	u_int8_t *qpc_end = qpc + qpc_sz;		\
-	u_int64_t magic = 0;				\
+	uint8_t *qpc = qpc_start;			\
+	uint8_t *qpc_end = qpc + qpc_sz;		\
+	uint64_t magic = 0;				\
 							\
 	qpc += qlist_put_delta(qpc, QLIST_MAGIC);	\
 	if(unlikely(qpc >= qpc_end))			\
@@ -208,9 +208,9 @@ static inline int qlist_put_item(u_int8_t *qbuf, u_int64_t *last_item, u_int64_t
 							\
 	int a_d = 0;					\
 	int b_d = 0;					\
-	u_int64_t a = 0;				\
-	u_int64_t b = 0;				\
-	u_int64_t c = 0;				\
+	uint64_t a = 0;				\
+	uint64_t b = 0;				\
+	uint64_t c = 0;				\
 							\
 	a_d = qlist_get_item(&qpa, &a);			\
 	b_d = qlist_get_item(&qpb, &b);
@@ -239,7 +239,7 @@ static inline int qlist_put_item(u_int8_t *qbuf, u_int64_t *last_item, u_int64_t
 	-1: qpc_sz too small
 	-2: bad magic
 */
-int qlist_or(u_int8_t *qpc_start, int qpc_sz, u_int8_t *qpa, u_int8_t *qpb) {
+int qlist_or(uint8_t *qpc_start, int qpc_sz, uint8_t *qpa, uint8_t *qpb) {
 	PREFIX;
 
 	while(a_d != -1 && b_d != -1) {
@@ -271,7 +271,7 @@ int qlist_or(u_int8_t *qpc_start, int qpc_sz, u_int8_t *qpa, u_int8_t *qpb) {
 	-1: qpc_sz too small
 	-2: bad magic
 */
-int qlist_and(u_int8_t *qpc_start, int qpc_sz, u_int8_t *qpa, u_int8_t *qpb) {
+int qlist_and(uint8_t *qpc_start, int qpc_sz, uint8_t *qpa, uint8_t *qpb) {
 	PREFIX;
 
 	while(a_d != -1 && b_d != -1) {
@@ -295,7 +295,7 @@ int qlist_and(u_int8_t *qpc_start, int qpc_sz, u_int8_t *qpa, u_int8_t *qpb) {
 	-1: qpc_sz too small
 	-2: bad magic
 */
-int qlist_andnot(u_int8_t *qpc_start, int qpc_sz, u_int8_t *qpa, u_int8_t *qpb) {
+int qlist_andnot(uint8_t *qpc_start, int qpc_sz, uint8_t *qpa, uint8_t *qpb) {
 	PREFIX;
 
 	while(a_d != -1 && b_d != -1) {
