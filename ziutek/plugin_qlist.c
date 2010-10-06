@@ -32,9 +32,9 @@ uint8_t buf_b[MAX_VALUE_SIZE];
    Ignore CAS.
 */
 ST_RES *cmd_qlist_add(ST_REQ *req, ST_RES *res) {
-	if(req->extras_sz || !req->key_sz || !req->value_sz)
+	if(req->extras_sz || !req->key_sz || !req->value_sz) {
 		return(set_error_code(res, MEMCACHE_STATUS_INVALID_ARGUMENTS));
-	
+	}
 	MC_METADATA md;
 	memset(&md, 0, sizeof(md));
 

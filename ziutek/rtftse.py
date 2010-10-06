@@ -204,6 +204,9 @@ class Sender:
                 for ((key, chunk_no), hitlist) in dd.iteritems():
                     transferred += len(hitlist)
                     k = namespace + ':' + key + ':' + str(chunk_no)
+                    if len(k) > 255:
+                        log.error("key %r too long, ignored" % (k,))
+                        continue
                     cmd[k] = hitlist # assume it's already packed
                     if k not in cache:
                         meta[key].append( chunk_no )
@@ -213,6 +216,9 @@ class Sender:
                 for key, chunk_numbers in meta.iteritems():
                     k = namespace + ':' + key + ':meta'
                     meta_chunks += 1
+                    if len(k) > 255:
+                        log.error("key %r too long, ignored" % (k,))
+                        continue
                     cmds['ADD'][k] = qlist.pack(chunk_numbers, sort=True)
 
                 if cmds['ADD']:

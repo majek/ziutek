@@ -28,7 +28,7 @@ def get_module_names(prefix_module_name, directory, file_mask, skip_modules):
     module_names = list_files(directory, file_mask)
     if prefix_module_name and prefix_module_name != "-":
         module_names = [prefix_module_name + "." + mn for mn in module_names]
-    module_names = filter(lambda mn: max([not mn.startswith(smn) for smn in skip_modules]) if skip_modules else True, module_names)
+    module_names = filter(lambda mn: not max([mn.startswith(smn) for smn in skip_modules]) if skip_modules else True, module_names)
     return sorted(module_names)
 
 
